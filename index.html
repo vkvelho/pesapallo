@@ -115,7 +115,8 @@ function throwTo(t,q){const f=ball.hold,sw=f.sw;let tx=t.x,ty=t.y,sp,dev=0;
  if(q<sw[0])sp=16+18*q/sw[0];else if(q<=sw[1])sp=42;else{sp=40;dev=8+40*Math.min(1,(q-sw[1])/(1-sw[1]))}
  if(dev){const a=rnd()*6.28,r=dev*(.4+.6*rnd());tx+=Math.cos(a)*r;ty+=Math.sin(a)*r;if(hF())say('Epätarkka heitto!')}else if(hF())say(q<sw[0]?'Hidas heitto':'Hyvä heitto!');
  const L=Math.hypot(tx-f.x,ty-f.y)||1;ball={x:f.x,y:f.y,h:1,vx:(tx-f.x)/L*sp,vy:(ty-f.y)/L*sp,vh:0,s:'throw',hold:null,tgt:t,rem:L/sp,hit:false,bounced:true};}
-function catchBy(f,base){ball.s='held';ball.hold=f;ball.h=0;ball.vx=ball.vy=0;ball.x=f.x;ball.y=f.y;G.aiT=0;G.aiD=.9+rnd()*.7;if(base!=null)burnAt(base)}
+function catchBy(f,base){ball.s='held';ball.hold=f;ball.h=0;ball.vx=ball.vy=0;ball.x=f.x;ball.y=f.y;G.aiT=0;G.aiD=.9+rnd()*.7;if(base!=null)burnAt(base);burnHeld(f)}
+const BASE_R=6;function burnHeld(f){if(phase!=='play')return;for(let i=0;i<4;i++)if(d2(f,B[i])<BASE_R)burnAt(i)}
 function nearF(p,ex){let b=null,bd=1e9;F.forEach(f=>{if(f===ex)return;const d=d2(f,p);if(d<bd){bd=d;b=f}});return b}
 function aiThrow(h){let best=null,bm=.1;R.forEach(r=>{if(r.st!=='run'||r.free)return;const bp=B[r.to],tr=(1-r.prog)*d2(B[r.from],bp)/r.sp,tb=d2(h,bp)/42+.25;
   const rc=nearF(bp,h);if(d2(rc,bp)>9)return;if(tr-tb>bm){bm=tr-tb;best=r.to}});
@@ -145,7 +146,7 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
    if(b.s==='flight'&&b.hit&&!b.bounced&&rnd()>(has(f.p,'C')?.75:.5)*Math.min(1,b.h/2+.5)){b.bounced=true;b.vx*=.3;b.vy*=.3;say('Koppi putosi!');continue}
    if(b.s==='flight'&&b.hit&&!b.bounced){const hv=R.filter(r=>r.st==='run'&&!r.free);hv.forEach(r=>R.splice(R.indexOf(r),1));G.haav+=hv.length;say('KOPPI!'+(hv.length?' '+hv.length+' haavoittui':''));}
    catchBy(f,null);break}}
- if(b.s==='held'&&phase==='play'){const h=b.hold;b.x=h.x;b.y=h.y;for(let i=1;i<4;i++)if(d2(h,B[i])<3.5)burnAt(i);
+ if(b.s==='held'&&phase==='play'){const h=b.hold;b.x=h.x;b.y=h.y;burnHeld(h);
   if(!hF()){G.aiT=(G.aiT||0)+dt;if(G.aiT>G.aiD&&G.aiT-dt<=G.aiD)aiThrow(h)}}
  // etenijät
  for(const r of R.slice()){if(r.st!=='run')continue;const a=B[r.from],c=B[r.to],L=d2(a,c);r.prog+=r.sp*dt/L;
