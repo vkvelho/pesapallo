@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="fi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Pesäpallo">
+<meta name="theme-color" content="#2e7d32"><title>Pesäpallo – kenttävuoro</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#2e7d32;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:-apple-system,Helvetica,Arial,sans-serif}
+canvas{display:block;width:100vw;height:100vh;height:100dvh}
+#hud{position:fixed;top:env(safe-area-inset-top);left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:6px 10px;color:#fff;font-size:14px;background:rgba(0,0,0,.35)}
+button{font:inherit;border:0;border-radius:6px;padding:5px 10px;background:#fff;color:#2e7d32;font-weight:600}
+#ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.6);color:#fff;font-size:22px;gap:14px;text-align:center}</style></head><body>
+<canvas id="c"></canvas><div id="hud"><span id="st"></span><button id="rs">Aloita alusta</button></div>
+<div id="ov"><div id="ovt"></div><button id="ovb">Uusi vuoro</button></div>
+<script>
+"use strict";
+const cv=document.getElementById('c'),cx=cv.getContext('2d');let W,H,S,OX,OY;
+function rsz(){const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0);S=Math.min(W/100,(H-40)/160);OX=(W-100*S)/2;OY=40+(H-40-160*S)/2;}
+addEventListener('resize',rsz);rsz();
+const B=[{x:50,y:150,n:'Koti'},{x:14,y:118,n:'1'},{x:88,y:82,n:'2'},{x:12,y:52,n:'3'}];
+const PLATE={x:50,y:138},POLTTO=72;
+const HOME=[[50,136,'Lukkari'],[50,153,'Sieppari'],[19,113,'1-polttaja'],[82,86,'2-polttaja'],[18,57,'3-polttaja'],[62,105,'Kenttä'],[38,80,'Polttolinja'],[25,25,'Koppari'],[75,25,'Koppari']];
+const SWEET=[0.55,0.75],FILL=1.1;
+let F,R,ball,g,hold,msgT,msg,playEnd,phase;
+const st=document.getElementById('st'),ov=document.getElementById('ov');
+function newInning(keep){F=HOME.map(h=>({x:h[0],y:h[1],hx:h[0],hy:h[1],n:h[2]}));R=[];g=keep?Object.assign(g,{palot:0,haav:0,lyonnit:0}):{palot:0,haav:0,juoksut:0,lyonnit:0,vuoro:1};resetBall();ov.style.display='none';say('Napauta kenttää syöttääksesi');}
+function resetBall(){ball={x:PLATE.x,y:PLATE.y,h:0,vx:0,vy:0,vh:0,s:'held',hold:F[0],hit:false,bounced:false};phase='ready';hold=null;playEnd=0;}
+function say(t){msg=t;msgT=2.2;}
+const d2=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function pitch(){phase='pitch';ball.s='pitch';ball.hold=null;ball.x=PLATE.x;ball.y=PLATE.y;ball.h=0;ball.vh=30;ball.vx=ball.vy=0;}
+function swing(){const r=Math.random();
+ if(r<.2){g.lyonnit++;if(g.lyonnit>=3){say('Lyönnit loppuivat – PALO!');palo();g.lyonnit=0;}else say('Huti! ('+g.lyonnit+'/3)');ball.s='held';ball.hold=F[0];ball.h=0;phase='ready';return}
+ const a=-Math.PI/2+(Math.random()-.5)*1.9,v=35+Math.random()*60,vh=8+Math.random()*30;
+ ball.vx=Math.cos(a)*v;ball.vy=Math.sin(a)*v;ball.vh=vh;ball.h=1;ball.s='flight';ball.hit=true;ball.bounced=false;
+ const t=2*vh/40,lx=ball.x+ball.vx*t,ly=ball.y+ball.vy*t;
+ if(lx<0||lx>100||ly<0||r<.3){g.lyonnit++;say('Lahoon! ('+Math.min(g.lyonnit,3)+'/3)');ball.foul=true;if(g.lyonnit>=3){g.lyonnit=0;say('Lyönnit loppuivat – PALO!');palo();}phase='foul';return}
+ ball.foul=false;g.lyonnit=0;phase='play';
+ R.forEach(q=>{if(q.s==='safe'){q.from=q.to;q.to=(q.to+1)%4;q.s='run';q.p=0}});
+ R.push({from:0,to:1,s:'run',p:0,x:B[0].x,y:B[0].y,sp:15+Math.random()*4});}
+function palo(){g.palot++;if(g.palot>=3){phase='over';setTimeout(()=>{document.getElementById('ovt').innerHTML='3 PALOA – VUORONVAIHTO<br><small>Juoksut: '+g.juoksut+' · Haavoittuneet: '+g.haav+'</small>';ov.style.display='flex'},600)}}
+function throwTo(t,q){const f=ball.hold;let tx=t.x,ty=t.y,sp,dev=0;
+ if(q<SWEET[0])sp=35+60*q/SWEET[0];else if(q<=SWEET[1])sp=115;else{sp=110;dev=8+40*Math.min(1,(q-SWEET[1])/(1-SWEET[1]))}
+ if(dev){const a=Math.random()*6.28,r=dev*(.4+.6*Math.random());tx+=Math.cos(a)*r;ty+=Math.sin(a)*r;say('Epätarkka heitto!')}else if(q<SWEET[0])say('Hidas heitto');else say('Hyvä heitto!');
+ const L=Math.hypot(tx-f.x,ty-f.y)||1;ball.s='throw';ball.hold=null;ball.thrower=f;ball.tgt=t;ball.x=f.x;ball.y=f.y;ball.h=1;ball.vx=(tx-f.x)/L*sp;ball.vy=(ty-f.y)/L*sp;ball.rem=L/sp;ball.hit=false;}
+function catchBy(f,base){ball.s='held';ball.hold=f;ball.h=0;ball.vx=ball.vy=0;
+ if(base!=null){let n=0;R.forEach(q=>{if(q.s==='run'&&q.to===base){q.s='out';n++}});R=R.filter(q=>q.s!=='out');if(n){say('PALO! '+(base?'pesällä '+base:'kotipesällä'));for(let i=0;i<n;i++)palo()}}}
+function step(dt){if(msgT>0)msgT-=dt;
+ if(ball.s==='pitch'){ball.vh-=40*dt;ball.h+=ball.vh*dt;if(ball.vh<0&&ball.h<6)swing()}
+ else if(ball.s==='flight'||ball.s==='roll'){ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;
+  if(ball.s==='flight'){ball.vh-=40*dt;ball.h+=ball.vh*dt;if(ball.h<=0){ball.h=0;ball.bounced=true;ball.s='roll';ball.vx*=.5;ball.vy*=.5}}
+  else{const k=Math.max(0,1-1.5*dt);ball.vx*=k;ball.vy*=k}
+  if(ball.x<1||ball.x>99){ball.vx*=-.5;ball.x=Math.max(1,Math.min(99,ball.x))}if(ball.y<1||ball.y>158){ball.vy*=-.5;ball.y=Math.max(1,Math.min(158,ball.y))}
+  if(ball.foul&&ball.s==='roll'){ball.foul=false;resetBall();return}}
+ else if(ball.s==='throw'){const m=Math.min(dt,ball.rem);ball.x+=ball.vx*m;ball.y+=ball.vy*m;ball.rem-=dt;
+  if(ball.rem<=0){const t=ball.tgt;if(d2(ball,t)<5){if(t.base!=null){const f=nearest(t,null);if(d2(f,t)<9)return catchBy(f,t.base)}else return catchBy(t,null)}
+   ball.s='roll';ball.bounced=true;ball.vx*=.35;ball.vy*=.35;ball.h=0}}
+ // fielders
+ let chaser=null;if(ball.s==='flight'||ball.s==='roll'){let p=ball;if(ball.s==='flight'){const t=Math.max(0,(ball.vh+Math.sqrt(ball.vh*ball.vh+80*ball.h))/40);p={x:ball.x+ball.vx*t,y:ball.y+ball.vy*t}}
+  chaser=nearest(p,ball.thrower&&ball.s==='roll'?null:null);chaser.goal=p;}
+ F.forEach(f=>{let gx=f.hx,gy=f.hy,sp=12;if(f===chaser){gx=f.goal.x;gy=f.goal.y;sp=24;if(d2(f,ball)<8&&ball.s==='flight')gx=ball.x,gy=ball.y}
+  if(f===ball.hold)return;const dx=gx-f.x,dy=gy-f.y,L=Math.hypot(dx,dy);if(L>.3){const m=Math.min(L,sp*dt);f.x+=dx/L*m;f.y+=dy/L*m}
+  if((ball.s==='flight'||ball.s==='roll')&&d2(f,ball)<2.6&&ball.h<6){
+   if(ball.s==='flight'&&ball.hit&&!ball.bounced){const n=R.filter(q=>q.s==='run').length;R=R.filter(q=>q.s!=='run');g.haav+=n;say('KOPPI! '+n+' haavoittunut');catchBy(f,null)}else catchBy(f,null)}});
+ // runners
+ R.forEach(q=>{if(q.s!=='run')return;const a=B[q.from],b=B[q.to],L=d2(a,b);q.p+=q.sp*dt/L;if(q.p>=1){q.p=1;if(q.to===0){q.s='home';g.juoksut++;say('JUOKSU!')}else q.s='safe'}q.x=a.x+(b.x-a.x)*q.p;q.y=a.y+(b.y-a.y)*q.p});
+ R=R.filter(q=>q.s!=='home');
+ if(phase==='play'&&ball.s==='held'&&!R.some(q=>q.s==='run')&&!hold){playEnd+=dt;if(playEnd>1){const p=g.palot;resetBall();if(p<3)say('Napauta syöttääksesi')}}
+ if(phase==='foul'&&ball.s==='roll'&&Math.hypot(ball.vx,ball.vy)<3)resetBall();
+ if(hold)hold.t+=dt;}
+function nearest(p,ex){let b=null,bd=1e9;F.forEach(f=>{if(f===ex)return;const d=d2(f,p);if(d<bd){bd=d;b=f}});return b}
+const P=(x,y)=>[OX+x*S,OY+y*S];
+function draw(){cx.fillStyle='#2e7d32';cx.fillRect(0,0,W,H);cx.fillStyle='#c9a66b';cx.fillRect(OX,OY,100*S,160*S);
+ cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.strokeRect(OX,OY,100*S,160*S);cx.setLineDash([6,5]);cx.beginPath();cx.moveTo(...P(0,POLTTO));cx.lineTo(...P(100,POLTTO));cx.stroke();cx.setLineDash([]);
+ cx.strokeStyle='rgba(255,255,255,.5)';cx.beginPath();cx.moveTo(...P(B[0].x,B[0].y));[1,2,3,0].forEach(i=>cx.lineTo(...P(B[i].x,B[i].y)));cx.stroke();
+ cx.fillStyle='rgba(255,255,255,.75)';cx.font=Math.max(9,3*S)+'px sans-serif';cx.fillText('polttolinja',...P(2,POLTTO-1.5));
+ cx.strokeStyle='#fff';cx.beginPath();cx.arc(...P(PLATE.x,PLATE.y),3*S,0,7);cx.stroke();
+ B.forEach((b,i)=>{const[x,y]=P(b.x,b.y),r=3*S;cx.fillStyle=hold&&hold.t0===b?'#ffeb3b':'#fff';cx.fillRect(x-r,y-r,2*r,2*r);cx.fillStyle='#333';cx.textAlign='center';cx.fillText(b.n,x,y+1.3*S);cx.textAlign='left'});
+ R.forEach(q=>{const[x,y]=P(q.x,q.y);cx.fillStyle='#d32f2f';cx.beginPath();cx.arc(x,y,2.2*S,0,7);cx.fill()});
+ F.forEach(f=>{const[x,y]=P(f.x,f.y);cx.fillStyle=hold&&hold.t0===f?'#ffeb3b':'#1565c0';cx.beginPath();cx.arc(x,y,2.4*S,0,7);cx.fill();if(f===ball.hold){cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(x,y,3.6*S,0,7);cx.stroke()}});
+ if(ball.s!=='held'||!ball.hold){const[x,y]=P(ball.x,ball.y);cx.fillStyle='rgba(0,0,0,.3)';cx.beginPath();cx.arc(x,y,1.2*S,0,7);cx.fill();cx.fillStyle='#ff0';cx.beginPath();cx.arc(x,y-ball.h*.6*S,(1.2+ball.h*.03)*S,0,7);cx.fill()}
+ if(hold&&ball.hold){const[x,y]=P(ball.hold.x,ball.hold.y),w=22*S,h=2.6*S,mx=Math.max(4,Math.min(W-w-4,x-w/2)),my=y-7*S;cx.fillStyle='#222';cx.fillRect(mx,my,w,h);cx.fillStyle='#4caf50';cx.fillRect(mx+w*SWEET[0],my,w*(SWEET[1]-SWEET[0]),h);
+  const q=Math.min(1,hold.t/FILL);cx.fillStyle=q>SWEET[1]?'#f44336':'#fff';cx.fillRect(mx,my+h*.3,w*q,h*.4);
+  const t=hold.t0;cx.strokeStyle='rgba(255,255,0,.6)';cx.setLineDash([4,4]);cx.beginPath();cx.moveTo(x,y);cx.lineTo(...P(t.x,t.y));cx.stroke();cx.setLineDash([])}
+ if(msgT>0){cx.fillStyle='rgba(0,0,0,.55)';cx.font='bold 17px sans-serif';const tw=cx.measureText(msg).width;cx.fillRect(W/2-tw/2-10,OY+60*S-20,tw+20,30);cx.fillStyle='#fff';cx.textAlign='center';cx.fillText(msg,W/2,OY+60*S);cx.textAlign='left'}
+ st.textContent='Palot '+g.palot+'/3 · Haav. '+g.haav+' · Juoksut '+g.juoksut+' · Lyönnit '+g.lyonnit+'/3';}
+function pos(e){const t=e.changedTouches?e.changedTouches[0]:e;return{x:(t.clientX-OX)/S,y:(t.clientY-OY)/S}}
+function down(e){e.preventDefault();if(phase==='over')return;const p=pos(e);
+ if(phase==='ready'&&ball.hold===F[0]){pitch();return}
+ if(ball.s==='held'&&ball.hold&&phase==='play'){let best=null,bd=9;B.forEach((b,i)=>{const d=d2(b,p);if(d<bd){bd=d;best={x:b.x,y:b.y,base:i,ref:b}}});F.forEach(f=>{if(f===ball.hold)return;const d=d2(f,p);if(d<bd){bd=d;best=f}});
+  if(best){hold={t:0,tgt:best,t0:best.ref||best};playEnd=0}}}
+function up(e){e.preventDefault();if(!hold)return;const h=hold;hold=null;if(ball.s==='held'&&ball.hold)throwTo(h.tgt,Math.min(1,h.t/FILL))}
+cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchend',up,{passive:false});cv.addEventListener('touchcancel',up,{passive:false});
+cv.addEventListener('mousedown',e=>{down(e)});addEventListener('mouseup',e=>{if(hold)up(e)});
+document.addEventListener('gesturestart',e=>e.preventDefault());document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.getElementById('rs').onclick=()=>newInning(false);document.getElementById('ovb').onclick=()=>{g.vuoro++;newInning(true)};
+newInning(false);let lt=performance.now();(function loop(n){const dt=Math.min(.05,(n-lt)/1000);lt=n;step(dt);draw();requestAnimationFrame(loop)})(lt);
+window.__g=()=>({g,phase,ball:ball.s});
+</script></body></html>
