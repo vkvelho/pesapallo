@@ -10,12 +10,13 @@ canvas{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh}
 #info{display:flex;justify-content:space-between;align-items:center;margin-top:3px;gap:4px}
 button{font:inherit;border:0;border-radius:6px;padding:4px 9px;background:#fff;color:#7a3f1d;font-weight:700}
 #msg{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 6px);text-align:center;font-weight:700;font-size:16px;z-index:2;pointer-events:none;text-shadow:0 1px 3px #000}
-#ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);z-index:5;padding:16px;box-sizing:border-box}
-#ovc{max-width:420px;max-height:90%;overflow:auto;background:#3b2216;border-radius:12px;padding:16px;font-size:14px;line-height:1.4}
+#ov{position:fixed;inset:0;padding-top:calc(16px + env(safe-area-inset-top))!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);z-index:5;padding:16px;box-sizing:border-box}
+#ovc{max-width:420px;width:100%;display:flex;flex-direction:column;max-height:calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));box-sizing:border-box;background:#3b2216;border-radius:12px;padding:16px;font-size:14px;line-height:1.4}
 #ovc h2{margin:0 0 8px}#ovc table{width:100%;font-size:13px;border-collapse:collapse}#ovc td{padding:2px 4px;border-bottom:1px solid rgba(255,255,255,.1)}
-#ovb{margin-top:12px;width:100%;padding:10px;font-size:16px}</style></head><body>
+#ovt{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain}#ovb{flex:0 0 auto;margin-top:12px;width:100%;padding:12px;font-size:17px}
+#jb{display:flex;gap:4px;margin-top:3px}#jb:empty{display:none}#jb button{flex:1;padding:4px 2px}#st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}#info>span:last-child{flex:0 0 auto}</style></head><body>
 <canvas id="c"></canvas>
-<div id="hud"><table id="sb"></table><div id="info"><span id="st"></span><span><span id="jb"></span> <button id="rb">☰</button> <button id="rs">↺</button></span></div></div>
+<div id="hud"><table id="sb"></table><div id="info"><span id="st"></span><span><button id="rb">☰</button> <button id="rs">↺</button></span></div><div id="jb"></div></div>
 <div id="msg"></div><div id="ov"><div id="ovc"><div id="ovt"></div><button id="ovb">OK</button></div></div>
 <script>
 "use strict";
@@ -196,7 +197,7 @@ function down(e){e.preventDefault();if(!G||phase==='wait'||phase==='over')return
 function up(e){e.preventDefault();if(!hold)return;const h=hold;hold=null;if(ball.s==='held'&&ball.hold&&phase==='play')throwTo(h.f||{x:h.x,y:h.y,base:h.base},Math.min(1,h.t/1.1))}
 cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchend',up,{passive:false});cv.addEventListener('touchcancel',up,{passive:false});
 cv.addEventListener('mousedown',down);addEventListener('mouseup',e=>{if(hold)up(e)});
-document.addEventListener('gesturestart',e=>e.preventDefault());document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());document.addEventListener('touchmove',e=>{if(!e.target.closest('#ovt'))e.preventDefault()},{passive:false});
 $('rs').onclick=()=>{if(confirm('Aloitetaanko uusi ottelu?'))newGame()};$('rb').onclick=()=>{const ph=phase;phase=phase==='over'?'over':'wait';ov('<h2>Kokoonpanot</h2>'+roster()+help(),'Sulje',()=>{phase=ph})};
 newGame();rsz();let lt=performance.now(),hudT=0;
 function frame(dt){if(hold)hold.t+=dt;if(tapMark)tapMark.t-=dt;for(let i=0;i<SPEED;i++)step(dt)}
