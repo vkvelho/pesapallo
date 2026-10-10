@@ -78,36 +78,36 @@ function tot(t){return T[t].runs.slice(0,8).reduce((a,b)=>a+(b||0),0)}
 function finish(w,note){phase='over';G.over=true;G.winner=w;const r=w<0?'Tasapeli':(w===0?'VOITIT! ':'Hävisit. ')+T[w].name+' voitti ottelun.';
  if(AUTO){updHud();return}ov('<h2>Ottelu päättyi</h2>'+note+'<br><b>'+r+'</b><br>Jaksot '+jaksoWins().join('–')+', juoksut '+tot(0)+'–'+tot(1),'Uusi ottelu',newGame)}
 // ---- syöttö & lyönti ----
-function doPitch(){if(phase!=='pre'||!batterReady())return;aiJoker();phase='pitch';G.play++;G.swung=false;G.playT=0;const L=F[0].p,va=rnd()<(has(L,'L')?.07:.17);
+function doPitch(){if(phase!=='pre'||!batterReady())return;G.koppi=false;aiJoker();phase='pitch';G.play++;G.swung=false;G.playT=0;const L=F[0].p,va=rnd()<(has(L,'L')?.07:.17);
  ball={x:PLATE.x+(va?(rnd()<.5?-3.4:3.4):0),y:PLATE.y,h:0,vx:0,vy:0,vh:30,s:'pitch',hold:null,vaara:va,hit:false,bounced:false};
  const bp=G.batter;G.aiH=(!hB()&&bp)?((va&&rnd()<.75)?-1:3.2+(rnd()-.5)*(has(bp,'T')?1.8:3)):-1;}
 function timingQ(){if(ball.vh>=0||ball.h>6||ball.h<.7)return 0;return Math.max(.05,1-Math.abs(ball.h-3.2)/2.8)}
-function aiAim(){const p=G.batter;const deep=G.lyonnit>=2||(has(p,'K')?rnd()<.6:rnd()<.3);return{x:XL+6+rnd()*(XR-XL-12),y:deep?10+rnd()*60:70+rnd()*45}}
+function aiAim(){const p=G.batter;const deep=G.lyonnit>=2||(has(p,'K')?rnd()<.6:rnd()<.3);return{x:rnd()<.35?(rnd()<.5?XL:XR)+(rnd()-.5)*9:XL+3+rnd()*(XR-XL-6),y:deep?10+rnd()*60:70+rnd()*45}}
 function doSwing(q,aim){if(G.swung||!G.batter)return;G.swung=true;const p=G.batter;
  if(q<=0){say('Huti!');ball.s='dead';return useLyonti()}
  G.lyonnit++;const pw=has(p,'K')?1:.6,acc=has(p,'T')?.45:1;
  let dx=aim.x-PLATE.x,dy=Math.min(aim.y-PLATE.y,-8),ang=Math.atan2(dy,dx)+(rnd()-.5)*(.12+(1-q)*.9)*acc;
- let dist=Math.min(Math.hypot(dx,dy),55+95*pw*(.45+.55*q))*(1+(rnd()-.5)*(.15+(1-q)*.5)*acc);
- const low=rnd()<(has(p,'T')?.6:.5),vh=low?2.5+rnd()*5:12+rnd()*12,t=2*vh/40,v=Math.min(dist/(t+.32),32+42*pw*(.4+.6*q));ball={x:PLATE.x,y:PLATE.y-1,h:1,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vh,s:'flight',hold:null,hit:true,bounced:false,age:0};
+ let mis=q<.55&&rnd()<.35||rnd()<.025;let dist=mis?1+rnd()*4:Math.min(Math.hypot(dx,dy),55+95*pw*(.45+.55*q))*(1+(rnd()-.5)*(.15+(1-q)*.5)*acc);
+ const low=rnd()<(has(p,'T')?.6:.5),vh=low?2.5+rnd()*5:12+rnd()*12,t=2*vh/40,v=Math.min(dist/(low?t+.32:t),32+42*pw*(.4+.6*q));ball={x:PLATE.x,y:PLATE.y-1,h:1,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vh,s:'flight',hold:null,hit:true,bounced:false,age:0};
  phase='play';G.playT=0;G.endT=0;G.aiRunT=0;say(q>.75?'Hyvä lyönti!':'Lyönti');
  const forced=G.lyonnit>=3&&G.stage!=='k',lt=t+.3,land={x:clamp(PLATE.x+ball.vx*lt,XL,XR),y:clamp(PLATE.y+ball.vy*lt,YT,YB)};
  const ok=(from,sp)=>{if(!low&&rnd()<.85)return false;const nb=B[(from+1)%4];const lg=d2(B[from],nb);return lg/sp<(t+1.1+d2(land,nb)/42)*(low?1.35:1.05)*(lg>45?.8:1.15)*(G.stage==='k'?1.5:1.2)*(.8+rnd()*.4)};
  if(!hB())R.slice().sort((a,b)=>b.base-a.base).forEach(r=>{if(r.st==='safe'&&ok(r.base,r.sp*1.5))send(r)});
- if(forced)batterRun();else if(!hB()&&G.stage!=='k'&&ok(0,(has(p,'N')?14.5:12.5)*1.4)&&!occ(1))batterRun();R.forEach(r=>{if(r.st==='run'&&r.playId===G.play&&!r.bat)r.prog=Math.min(.9,r.prog+.9*r.sp/d2(B[r.from],B[r.to]))});}
+ if(forced)batterRun();else if(!hB()&&G.stage!=='k'&&ok(0,(has(p,'N')?14.5:12.5)*1.4)&&!occ(1))batterRun();R.forEach(r=>{if(r.st==='run'&&r.playId===G.play&&!r.bat)r.prog=Math.min(.9,r.prog+1.15*r.sp/d2(B[r.from],B[r.to]))});}
 function useLyonti(){G.lyonnit++;if(G.lyonnit>=3){if(G.stage==='k'){phase='play';ball={...ball,s:'held',hold:F[0],h:0};return}
  say('3. lyönti meni – PALO!');G.palot++;G.batter&&G.queue.push(G.batter);G.batter=null;if(G.palot>=3)G.endPalo=.9;phase='play';G.playT=0;G.endT=0;resetHoldLukkari();}else{G.dead=.7;phase='dead'}}
 function resetHoldLukkari(){ball={x:F[0].x,y:F[0].y,h:0,vx:0,vy:0,vh:0,s:'held',hold:F[0],hit:false,bounced:false}}
-function pitchLanded(){if(ball.vaara){G.vaarat++;if(G.vaarat>=2){G.vaarat=0;say('2 väärää – vapaataival!');vapaataival()}else say('Väärä syöttö');G.dead=.7;phase='dead'}
+function pitchLanded(){if(ball.vaara){G.vaarat++;if(!R.length&&G.batter&&!G.batter.j&&G.stage!=='k'){say('Väärä syöttö – lyöjälle vapaataival');vapaataival();return}if(R.length&&G.vaarat>=2){say(G.vaarat+'. väärä – kärkietenijälle vapaataival!');vapaataival();return}say('Väärä syöttö');G.dead=.7;phase='dead'}
  else{say('Syöttö meni ohi (lyönti)');useLyonti()}}
-function vapaataival(){const r=R.filter(r=>r.st==='safe').sort((a,b)=>(b.base||4)-(a.base||4))[0];
- if(r){r.free=true;send(r,true)}else if(G.batter&&G.stage!=='k'){batterRun();R[R.length-1].free=true}
+function vapaataival(){const r=R.filter(r=>r.st==='safe'||r.st==='back').sort((a,b)=>(b.base||4)-(a.base||4))[0];
+ if(r){if(r.st==='back'){r.st='safe';r.base=r.from}r.free=true;send(r,true,true)}else if(G.batter&&G.stage!=='k'){batterRun();R[R.length-1].free=true}
  phase='play';G.playT=0;G.endT=0;resetHoldLukkari()}
 // ---- etenijät ----
-function occ(b,ex){return b!==0&&R.some(o=>o!==ex&&((o.st==='safe'&&o.base===b)||(o.st==='run'&&o.to===b)))}
-function send(r,force){if(r.st!=='safe')return false;const nx=(r.base+1)%4;
+function occ(b,ex){return b!==0&&R.some(o=>o!==ex&&((o.st==='safe'&&o.base===b)||(o.st==='run'&&o.to===b)||(o.st==='back'&&o.from===b)))}
+function send(r,force,vt){if(r.st!=='safe')return false;if(G.koppi&&phase==='play'&&!vt){if(hB())say('Kopin jälkeen ei saa edetä');return false}const nx=(r.base+1)%4;
  if(occ(nx,r)){const o=R.find(o=>o!==r&&o.st==='safe'&&o.base===nx);if(!(force&&o&&send(o,true)))return false}
  r.st='run';r.from=r.base;r.to=nx;r.prog=0;r.playId=G.play;return true}
-function batterRun(){if(!G.batter||G.stage==='k')return;const r=mkR(G.batter,0);r.bat=true;r.playId=G.play;R.push(r);if(!send(r,true)){r.st='run';r.from=0;r.to=1}G.batter=null}
+function batterRun(){if(!G.batter||G.stage==='k'||(G.koppi&&phase==='play'))return;const r=mkR(G.batter,0);r.bat=true;r.playId=G.play;R.push(r);if(!send(r,true)){r.st='run';r.from=0;r.to=1}G.batter=null}
 const SPOT={x:39,y:153.5},qslot=i=>({x:52+i*2.6,y:157}),hslot=i=>({x:33-i*2.6,y:157});
 function leave(r){R.splice(R.indexOf(r),1);r.p.wx=r.x;r.p.wy=r.y}
 function batterReady(){return !G.batter||G.batter.wx==null||Math.hypot(G.batter.wx-SPOT.x,G.batter.wy-SPOT.y)<.8}
@@ -139,7 +139,7 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
  const b=ball;
  if(b.s==='pitch'){b.vh-=40*dt;b.h+=b.vh*dt;if(G.aiH>0&&b.vh<0&&b.h<=G.aiH)doSwing(timingQ(),aiAim());else if(b.h<=0){b.h=0;b.s='dead';pitchLanded()}}
  else if(b.s==='flight'||b.s==='roll'){b.age=(b.age||0)+dt;b.x+=b.vx*dt;b.y+=b.vy*dt;
-  if(b.s==='flight'){b.vh-=40*dt;b.h+=b.vh*dt;if(b.h<=0){b.h=0;if(b.hit&&!b.bounced&&(b.x<XL||b.x>XR||b.y<YT||b.y>PLATE.y+2))return laho();b.bounced=true;b.s='roll';b.vx*=.45;b.vy*=.45}}
+  if(b.s==='flight'){b.vh-=40*dt;b.h+=b.vh*dt;if(b.h<=0){b.h=0;if(b.hit&&!b.bounced&&(b.x<XL||b.x>XR||b.y<YT||b.y>145))return laho();b.bounced=true;b.s='roll';b.vx*=.45;b.vy*=.45}}
   else{const k=Math.max(0,1-1.4*dt);b.vx*=k;b.vy*=k}
   if(b.s==='roll'){if(b.x<XL||b.x>XR){b.vx*=-.5;b.x=clamp(b.x,XL,XR)}if(b.y<YT||b.y>YB){b.vy*=-.5;b.y=clamp(b.y,YT,YB)}}}
  else if(b.s==='throw'){const m=Math.min(dt,b.rem);b.x+=b.vx*m;b.y+=b.vy*m;b.rem-=dt;
@@ -151,8 +151,8 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
  for(const f of F){if(f===b.hold&&phase!=='return'&&phase!=='swap')continue;let gx=f.hx,gy=f.hy,sp=f.sp*(phase==='swap'?1.6:phase==='return'?.8:.45);if(f===ch){gx=f.goal.x;gy=f.goal.y;sp=f.sp;if(d2(f,b)<10){gx=b.x;gy=b.y}}
   const dx=gx-f.x,dy=gy-f.y,L=Math.hypot(dx,dy);if(L>.2){const m=Math.min(L,sp*dt);f.x+=dx/L*m;f.y+=dy/L*m}
   if((b.s==='flight'||b.s==='roll')&&d2(f,b)<f.cr&&b.h<5&&(b.age>.3||!b.hit)){
-   if(b.s==='flight'&&b.hit&&!b.bounced&&rnd()>(has(f.p,'C')?.75:.5)*Math.min(1,b.h/2+.5)){b.bounced=true;b.vx*=.3;b.vy*=.3;say('Koppi putosi!');continue}
-   if(b.s==='flight'&&b.hit&&!b.bounced){const hv=R.filter(r=>r.st==='run'&&!r.free);hv.forEach(r=>{leave(r);G.haavL.push(r.p)});G.haav+=hv.length;say('KOPPI!'+(hv.length?' '+hv.length+' haavoittui':''));}
+   if(b.s==='flight'&&b.hit&&!b.bounced&&!window.__noDrop&&rnd()>(has(f.p,'C')?.75:.5)*Math.min(1,b.h/2+.5)){b.bounced=true;b.vx*=.3;b.vy*=.3;say('Koppi putosi!');continue}
+   if(b.s==='flight'&&b.hit&&!b.bounced){const hv=R.filter(r=>r.st==='run'&&!r.free);hv.forEach(r=>r.pend=true);G.koppi=true;say('KOPPI!'+(hv.length?' Etenijät haavoittuvat, ellei pallo ehdi pesälle ensin':''));}
    catchBy(f,null);break}}
  if(b.s==='held'&&(phase==='return'||phase==='swap')){const h=b.hold;b.x=h.x;b.y=h.y;
   if(h===F[0]){if(Math.hypot(h.x-h.hx,h.y-h.hy)<.8&&batterReady()&&(phase==='return'||F.every(f=>Math.hypot(f.x-f.hx,f.y-f.hy)<1.5))){phase='pre';G.preT=0}}
@@ -161,17 +161,18 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
  if(b.s==='held'&&phase==='play'){const h=b.hold;b.x=h.x;b.y=h.y;burnHeld(h);
   if(!hF()){G.aiT=(G.aiT||0)+dt;if(G.aiT>G.aiD&&G.aiT-dt<=G.aiD)aiThrow(h)}}
  // etenijät
- for(const r of R.slice()){if(r.st!=='run')continue;const a=B[r.from],c=B[r.to],L=d2(a,c);r.prog+=r.sp*dt/L;
-  if(r.prog>=1){r.prog=1;r.free=false;if(r.to===0){leave(r);score();if(G.stage!=='k')G.queue.push(r.p);say('JUOKSU! '+r.p.n);continue}
+ for(const r of R.slice()){if(r.st==='back'){const t=B[r.from],dx=t.x-r.x,dy=t.y-r.y,l=Math.hypot(dx,dy);if(l<.4){r.st='safe';r.base=r.from;r.x=t.x;r.y=t.y}else{const m=Math.min(l,r.sp*dt);r.x+=dx/l*m;r.y+=dy/l*m}continue}if(r.st!=='run')continue;const a=B[r.from],c=B[r.to],L=d2(a,c);r.prog+=r.sp*dt/L;
+  if(r.prog>=1){r.prog=1;r.free=false;if(r.pend){leave(r);G.haavL.push(r.p);G.haav++;say('Haavoittui: '+r.p.n);continue}if(r.to===0){leave(r);score();if(G.stage!=='k')G.queue.push(r.p);say('JUOKSU! '+r.p.n);continue}
    r.st='safe';r.base=r.to;if(r.bat&&r.playId===G.play&&r.to===3&&b.hit){score();say('KUNNARI! '+r.p.n)}r.bat=false}
   r.x=a.x+(c.x-a.x)*r.prog;r.y=a.y+(c.y-a.y)*r.prog}
  // AI etenijät pelin aikana
  if(phase==='play'&&!hB()&&G.stage!=='k'||phase==='play'&&!hB()&&G.stage==='k'){G.aiRunT=(G.aiRunT||0)+dt;if(G.aiRunT>.4){G.aiRunT=0;
   if(!(b.s==='flight'&&b.hit&&!b.bounced))R.slice().sort((x,y)=>(y.base||4)-(x.base||4)).forEach(r=>{if(r.st!=='safe')return;const nb=B[(r.base+1)%4];const lg=d2(B[r.base],nb),rt=lg/r.sp*(lg>45?1.15:.95),bp=b.s==='held'?b.hold:b,bt=(b.s==='held'?Math.max(0,(G.aiD||.5)-(G.aiT||0)):d2(nearF(b,null),b)/12+.6)+d2(bp,nb)/42,far=rt<bt*1.0&&rnd()<.6;if(far)send(r)})}}
  if(phase==='play'){if(b.s==='held'&&!R.some(r=>r.st==='run')&&!hold){G.endT+=dt;if(G.endT>(AUTO?.5:.9))endPlay()}else G.endT=0}}
-function laho(){say('Laiton lyönti!');ball.s='dead';
+function laho(){say('Laiton lyönti! Etenijät palaavat');ball.s='dead';
  R.slice().forEach(r=>{if(r.st!=='run')return;if(r.bat&&r.playId===G.play){leave(r);if(G.lyonnit>=3){G.palot++;G.queue.push(r.p);say('Laiton 3. lyönti – PALO!');if(G.palot>=3)G.endPalo=.9}else G.batter=r.p}
-  else if(!r.free){r.st='safe';r.base=r.from;r.x=B[r.from].x;r.y=B[r.from].y}});
+  else if(!r.free){r.st='back'}});
+ if(G.batter&&G.lyonnit>=3&&G.stage!=='k'){G.palot++;G.queue.push(G.batter);say('Laiton 3. lyönti – lyöjä PALAA');G.batter=null;if(G.palot>=3)G.endPalo=.9}
  if(G.stage==='k'&&G.lyonnit>=3){phase='play';resetHoldLukkari();return}G.dead=.9;phase='dead'}
 function endPlay(){if(G.endPalo)return;
  if(G.stage==='k'){if(G.pairScored||!R.length||G.lyonnit>=3){G.pairs++;if(G.pairs>=5)return endHalf();startPair()}toReturn();return}
