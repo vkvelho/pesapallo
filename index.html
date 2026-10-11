@@ -114,13 +114,15 @@ function send(r,force,vt){if(r.st!=='safe')return false;if(G.koppi&&phase==='pla
  r.st='run';r.from=r.base;r.to=nx;r.prog=0;r.playId=G.play;return true}
 function batterRun(){if(!G.batter||G.stage==='k'||(G.koppi&&phase==='play'))return;const r=mkR(G.batter,0);r.bat=true;r.playId=G.play;R.push(r);if(!send(r,true)){r.st='run';r.from=0;r.to=1}G.batter=null}
 const SPOT={x:39,y:153.5},qslot=i=>({x:52+i*2.6,y:157}),hslot=i=>({x:33-i*2.6,y:157});
-function leave(r){R.splice(R.indexOf(r),1);r.p.wx=r.x;r.p.wy=r.y}
+function leave(r,out){R.splice(R.indexOf(r),1);r.p.wx=r.x;r.p.wy=r.y;r.p.path=out?outPath(r):null}
+function outPath(r){const P=[];let c={x:r.x,y:r.y};if(r.st==='run'&&!onBase(r,r.to)){c=B[r.to];P.push({x:c.x,y:c.y})}
+ const left=c.x<42.5,sx=left?XL-3:XR+3,wp=left?[{x:sx,y:119},{x:28,y:155}]:[{x:sx,y:100},{x:55,y:153.5}];P.push({x:sx,y:c.y});wp.forEach(w=>{if(w.y>=c.y-1)P.push(w)});return P}
 function batterReady(){return !G.batter||G.batter.wx==null||Math.hypot(G.batter.wx-SPOT.x,G.batter.wy-SPOT.y)<.8}
 function updWalk(dt){const L=[];G.queue.filter(p=>p&&p!==G.batter&&!R.some(r=>r.p===p)).forEach((p,i)=>L.push([p,qslot(i)]));(G.haavL||[]).forEach((p,i)=>L.push([p,hslot(i)]));if(G.batter)L.push([G.batter,SPOT]);
- L.forEach(([p,t])=>{if(p.wx==null){p.wx=t.x;p.wy=t.y}const dx=t.x-p.wx,dy=t.y-p.wy,l=Math.hypot(dx,dy);if(l>.05){const m=Math.min(l,(dt>1?1e9:(phase==='swap'?22:14)*dt));p.wx+=dx/l*m;p.wy+=dy/l*m}})}
+ L.forEach(([p,t])=>{if(p.wx==null){p.wx=t.x;p.wy=t.y}if(p.path&&p.path.length){if(dt>1)p.path=null;else{t=p.path[0];if(Math.hypot(t.x-p.wx,t.y-p.wy)<.5)p.path.shift()}}const dx=t.x-p.wx,dy=t.y-p.wy,l=Math.hypot(dx,dy);if(l>.05){const m=Math.min(l,(dt>1?1e9:(phase==='swap'?22:14)*dt));p.wx+=dx/l*m;p.wy+=dy/l*m}})}
 function toReturn(){hold=null;G.endT=0;G.playT=0;G.retT=0;G.retWait=0;if(ball.s!=='held'){Object.assign(ball,{s:'roll',vx:0,vy:0,h:0,hit:false,bounced:true,x:clamp(ball.x,XL,XR),y:clamp(ball.y,YT,YB)})}phase='return'}
 function snapAll(){F.forEach(f=>{f.x=f.hx;f.y=f.hy});updWalk(99);resetBall();phase='pre';G.preT=0}
-function palo(r){leave(r);if(G.stage!=='k'){G.palot++;G.queue.push(r.p)}say('PALO! '+r.p.n);if(G.palot>=3)G.endPalo=.9}
+function palo(r){leave(r,true);if(G.stage!=='k'){G.palot++;G.queue.push(r.p)}say('PALO! '+r.p.n);if(G.palot>=3)G.endPalo=.9}
 function burnAt(b){let n=0;R.slice().forEach(r=>{if(r.st==='run'&&r.to===b&&!r.free){palo(r);n++}});return n}
 // ---- heitot ----
 function throwTo(t,q){const f=ball.hold,sw=f.sw;let tx=t.x,ty=t.y,sp,dev=0;
@@ -173,7 +175,7 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
  // etenijät
  for(const r of R.slice()){if(r.st==='safe'){const t=B[r.base],l=d2(r,t);if(l>.2){const m=Math.min(l,r.sp*dt);r.x+=(t.x-r.x)/l*m;r.y+=(t.y-r.y)/l*m}continue}if(r.st==='back'){const t=B[r.from],dx=t.x-r.x,dy=t.y-r.y,l=Math.hypot(dx,dy);if(l<.4){r.st='safe';r.base=r.from;r.x=t.x;r.y=t.y}else{const m=Math.min(l,r.sp*dt);r.x+=dx/l*m;r.y+=dy/l*m}continue}if(r.st!=='run')continue;const a=B[r.from],c=B[r.to],L=d2(a,c);r.prog+=r.sp*dt/L;
   r.x=a.x+(c.x-a.x)*Math.min(1,r.prog);r.y=a.y+(c.y-a.y)*Math.min(1,r.prog);
-  if((1-r.prog)*L<=BR[r.to]+PR_){r.free=false;if(r.pend){leave(r);G.haavL.push(r.p);G.haav++;say('Haavoittui: '+r.p.n);continue}if(r.to===0){leave(r);score();if(G.stage!=='k')G.queue.push(r.p);say('JUOKSU! '+r.p.n);continue}
+  if((1-r.prog)*L<=BR[r.to]+PR_){r.free=false;if(r.pend){leave(r,true);G.haavL.push(r.p);G.haav++;say('Haavoittui: '+r.p.n);continue}if(r.to===0){leave(r);score();if(G.stage!=='k')G.queue.push(r.p);say('JUOKSU! '+r.p.n);continue}
    r.st='safe';r.base=r.to;if(r.bat&&r.playId===G.play&&r.to===3&&b.hit){score();say('KUNNARI! '+r.p.n)}r.bat=false}}
  // AI etenijät pelin aikana
  if(phase==='play'&&!hB()&&G.stage!=='k'||phase==='play'&&!hB()&&G.stage==='k'){G.aiRunT=(G.aiRunT||0)+dt;if(G.aiRunT>.4){G.aiRunT=0;
