@@ -1,7 +1,7 @@
 const pp=require('puppeteer-core');(async()=>{const br=await pp.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox'],headless:'new'});
 const pg=await br.newPage();const errs=[];pg.on('pageerror',e=>errs.push(e.message));await pg.goto('http://localhost:8787/');await pg.click('#ovb');
 const res=await pg.evaluate(()=>{snapAll();const out={};
- const setup=()=>{phase='play';G.palot=0;G.queue=[];R=[];const a=mkR(T[1].pl[0],1),b=mkR(T[1].pl[1],2);R.push(a,b);send(b);send(a);a.prog=.1;b.prog=.1;
+ const setup=()=>{phase='play';G.palot=0;G.queue=[];R=[];const a=mkR(T[1].pl[0],1),b=mkR(T[1].pl[1],2);R.push(a,b);send(b);send(a);a.prog=0;b.prog=.1;
   const k=F[7];ball={x:k.x,y:k.y,h:0,s:'held',hold:k,hit:false,bounced:true};return k};
  // Scenario A: throw to 3rd (exact base target), then immediately toward 2nd via receiving fielder
  let k=setup();throwTo({x:B[3].x,y:B[3].y,base:3},.65);let t=0;while(ball.s!=='held'&&t<10){step(1/60);t+=1/60}
