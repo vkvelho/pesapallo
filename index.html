@@ -20,6 +20,7 @@ button{font:inherit;border:0;border-radius:6px;padding:4px 9px;background:#fff;c
 <div id="msg"></div><div id="ov"><div id="ovc"><div id="ovt"></div><button id="ovb">OK</button></div></div>
 <script>
 "use strict";
+const VP=3,NP=2*VP,SPI=NP,KPI=NP+1,KMAX=KPI+5; // vuoroparia/jakso; indeksit: normaalit 0..NP-1, super SPI, kotiutus KPI..KMAX
 const Q=new URLSearchParams(location.search),AUTO=Q.has('auto'),SPEED=+Q.get('speed')||1;
 const cv=document.getElementById('c'),cx=cv.getContext('2d'),$=id=>document.getElementById(id);
 let W,H,S,OX,OY;
@@ -46,11 +47,11 @@ function makeF(t){const pl=t.pl.slice(),out=[];const take=f=>{const i=pl.findInd
  return ord.map((p,i)=>({p,i,x:POS[i][0],y:POS[i][1],hx:POS[i][0],hy:POS[i][1],sp:has(p,'N')?13:11,cr:has(p,'C')?3.8:2.6,sw:has(p,'H')?[.5,.8]:[.56,.74]}));}
 // ---- ottelu ----
 function newGame(){T.forEach(t=>{t.next=0;t.runs=[]});G={pi:0,half:0,stage:'n',over:false,play:0};
- ov('<h2>Pesäpallo</h2>Sinä: <b style="color:#90caf9">Pesäkarhut</b> (kotijoukkue, aloittaa ulkovuorossa).<br>Ottelu: 2 jaksoa × 4 vuoroparia, tasatilanteessa supervuoropari ja kotiutuskilpailu.'+help()+roster(),'Aloita',startHalf);}
+ ov('<h2>Pesäpallo</h2>Sinä: <b style="color:#90caf9">Pesäkarhut</b> (kotijoukkue, aloittaa ulkovuorossa).<br>Ottelu: 2 jaksoa × '+VP+' vuoroparia, tasatilanteessa supervuoropari ja kotiutuskilpailu.'+help()+roster(),'Aloita',startHalf);}
 function help(){return '<p><b>Ulkovuoro:</b> napauta kenttää → lukkari syöttää. Kun pallo on pelaajallasi, <b>paina ja pidä</b> pesää tai toista pelaajaa: vapauta kun mittari on vihreällä. Liian lyhyt = hidas heitto, liian pitkä = epätarkka. Pallo pesällä ennen etenijää = palo.</p><p><b>Sisävuoro:</b> lukkari syöttää itse. <b>Napauta kohtaa, johon haluat lyödä</b>, kun pallo putoaa lautaselle (rengas vihertää). <b>Jokerit</b> (J1–J3, yläpalkki): vaihda lyöjä jokeriin ennen ensimmäistä syöttöä, kukin kerran vuorossa. Napauta <b>lyöjää</b> lähettääksesi hänet ykköselle ja <b>etenijää</b> lähettääksesi hänet seuraavalle pesälle (myös syötön aikana).</p>'}
 function roster(){let s='<table>';T.forEach(t=>{s+='<tr><td colspan=2 style="color:'+(t===T[0]?'#90caf9':'#ef9a9a')+'"><b>'+t.name+'</b></td></tr>';t.pl.concat(t.jk).forEach((p,i)=>s+='<tr><td>'+(i+1)+'. '+p.n+'</td><td>'+ic(p)+'</td></tr>')});
  return s+'</table><p style="font-size:12px">'+Object.values(AB).map(a=>a[0]+' '+a[1]).join('<br>')+'</p>'}
-function plabel(){return G.stage==='n'?(G.pi<4?'1. jakso, '+(G.pi+1)+'. vuoropari':'2. jakso, '+(G.pi-3)+'. vuoropari'):G.stage==='s'?'Supervuoropari':'Kotiutuskilpailu'}
+function plabel(){return G.stage==='n'?(G.pi<VP?'1. jakso, '+(G.pi+1)+'. vuoropari':'2. jakso, '+(G.pi-VP+1)+'. vuoropari'):G.stage==='s'?'Supervuoropari':'Kotiutuskilpailu'}
 function startHalf(){const bt=batT(),t=T[bt];F.forEach(f=>{f.p.wx=f.x;f.p.wy=f.y});R.forEach(r=>{r.p.wx=r.x;r.p.wy=r.y});G.haavL=[];G.jUsed=[];G.subbed=false;G.palot=0;G.haav=0;G.pairs=0;G.pairScored=false;R=[];G.queue=[];
  for(let i=0;i<9;i++)G.queue.push(t.pl[(t.next+i)%9]);F=makeF(T[1-bt]);F.forEach((f,i)=>{const s=qslot(i);f.x=f.p.wx!=null?f.p.wx:s.x;f.y=f.p.wy!=null?f.p.wy:s.y});if(t.runs[G.pi]==null)t.runs[G.pi]=0;if(T[1-bt].runs[G.pi]==null)T[1-bt].runs[G.pi]=0;
  G.batter=null;if(G.stage==='k')startPair();else nextBatter();resetBall(true);phase='swap';G.retT=0;
@@ -64,17 +65,17 @@ function resetBall(ns){ball={x:F[0].x,y:F[0].y,h:0,vx:0,vy:0,vh:0,s:'held',hold:
 function say(t){$('msg').textContent=t;G.msgT=2.6}
 function score(){T[batT()].runs[G.pi]++;if(G.stage==='k')G.pairScored=true}
 function ov(html,btn,cb){if(AUTO){cb();return}$('ovt').innerHTML=html;$('ovb').textContent=btn;$('ov').style.display='flex';$('ovb').onclick=()=>{$('ov').style.display='none';cb()}}
-function jsum(t,j){let s=0;for(let i=j*4;i<j*4+4;i++)s+=T[t].runs[i]||0;return s}
+function jsum(t,j){let s=0;for(let i=j*VP;i<j*VP+VP;i++)s+=T[t].runs[i]||0;return s}
 function jaksoWins(){const w=[0,0];[0,1].forEach(j=>{const a=jsum(0,j),b=jsum(1,j);if(a>b)w[0]++;else if(b>a)w[1]++});return w}
 function endHalf(){if(phase==='wait'||phase==='over')return;phase='wait';hold=null;
  if(G.half===0){G.half=1;return ov('<h2>Vuoronvaihto</h2>'+plabel()+'<br>'+(hB()?'Sinä olet sisävuorossa – lyö!':'Ulkovuoro.')+'<br>'+T[0].sh+' '+tot(0)+' – '+tot(1)+' '+T[1].sh,'Jatka',startHalf)}
  G.half=0;let note='';
- if(G.stage==='n'){G.pi++;if(G.pi===4){const a=jsum(0,0),b=jsum(1,0);note='1. jakso päättyi '+a+'–'+b+'. '}
-  if(G.pi>=8){const w=jaksoWins();note='Jaksot '+w[0]+'–'+w[1]+'. ';if(w[0]!==w[1])return finish(w[0]>w[1]?0:1,note);G.stage='s';G.pi=8;note+='Tasan → supervuoropari!'}}
- else if(G.stage==='s'){const a=T[0].runs[8],b=T[1].runs[8];if(a!==b)return finish(a>b?0:1,'Supervuoropari '+a+'–'+b+'. ');G.stage='k';G.pi=9;note='Supervuoropari tasan → kotiutuskilpailu (5 paria).'}
- else{const a=T[0].runs[G.pi],b=T[1].runs[G.pi];if(a!==b)return finish(a>b?0:1,'Kotiutuskilpailu '+a+'–'+b+'. ');if(G.pi>=14)return finish(-1,'');G.pi++;note='Kotiutuskilpailu tasan – uusi kierros.'}
+ if(G.stage==='n'){G.pi++;if(G.pi===VP){const a=jsum(0,0),b=jsum(1,0);note='1. jakso päättyi '+a+'–'+b+'. '}
+  if(G.pi>=NP){const w=jaksoWins();note='Jaksot '+w[0]+'–'+w[1]+'. ';if(w[0]!==w[1])return finish(w[0]>w[1]?0:1,note);G.stage='s';G.pi=SPI;note+='Tasan → supervuoropari!'}}
+ else if(G.stage==='s'){const a=T[0].runs[SPI],b=T[1].runs[SPI];if(a!==b)return finish(a>b?0:1,'Supervuoropari '+a+'–'+b+'. ');G.stage='k';G.pi=KPI;note='Supervuoropari tasan → kotiutuskilpailu (5 paria).'}
+ else{const a=T[0].runs[G.pi],b=T[1].runs[G.pi];if(a!==b)return finish(a>b?0:1,'Kotiutuskilpailu '+a+'–'+b+'. ');if(G.pi>=KMAX)return finish(-1,'');G.pi++;note='Kotiutuskilpailu tasan – uusi kierros.'}
  ov('<h2>Vuoropari päättyi</h2>'+note+'<br>'+plabel()+' alkaa.<br>'+T[0].sh+' '+tot(0)+' – '+tot(1)+' '+T[1].sh,'Jatka',startHalf)}
-function tot(t){return T[t].runs.slice(0,8).reduce((a,b)=>a+(b||0),0)}
+function tot(t){return T[t].runs.slice(0,NP).reduce((a,b)=>a+(b||0),0)}
 function finish(w,note){phase='over';G.over=true;G.winner=w;const r=w<0?'Tasapeli':(w===0?'VOITIT! ':'Hävisit. ')+T[w].name+' voitti ottelun.';
  if(AUTO){updHud();return}ov('<h2>Ottelu päättyi</h2>'+note+'<br><b>'+r+'</b><br>Jaksot '+jaksoWins().join('–')+', juoksut '+tot(0)+'–'+tot(1),'Uusi ottelu',newGame)}
 // ---- syöttö & lyönti ----
@@ -194,9 +195,9 @@ function draw(){const gr=cx.createRadialGradient(W/2,H*.4,10,W/2,H/2,H*.8);gr.ad
  if(tapMark&&tapMark.t>0){const[x,y]=P(tapMark.x,tapMark.y);cx.strokeStyle='rgba(255,255,255,'+tapMark.t+')';cx.lineWidth=2;cx.beginPath();cx.arc(x,y,2*S,0,7);cx.stroke()}
  if(hold&&ball.hold){const h=ball.hold,[x,y]=P(h.x,h.y),w=22*S,hh=2.6*S,mx=clamp(x-w/2,4,W-w-4),my=y-7*S;cx.fillStyle='#222';cx.fillRect(mx,my,w,hh);cx.fillStyle='#4caf50';cx.fillRect(mx+w*h.sw[0],my,w*(h.sw[1]-h.sw[0]),hh);
   const q=Math.min(1,hold.t/1.1);cx.fillStyle=q>h.sw[1]?'#f44336':'#fff';cx.fillRect(mx,my+hh*.3,w*q,hh*.4);const tp=hold.base!=null?B[hold.base]:hold.f;cx.strokeStyle='rgba(255,255,0,.6)';cx.setLineDash([4,4]);cx.beginPath();cx.moveTo(x,y);cx.lineTo(...P(tp.x,tp.y));cx.stroke();cx.setLineDash([])}}
-function updHud(){if(!G)return;let s='<tr><td></td>';for(let i=0;i<8;i++)s+='<td'+(i===3?' style="border-right:2px solid #fff"':'')+'>'+(i%4+1)+'</td>';s+='<td>S</td><td>K</td><td><b>Σ</b></td><td>J</td></tr>';const jw=jaksoWins();
- T.forEach((t,ti)=>{s+='<tr><td class="tn" style="color:'+(ti?'#ef9a9a':'#90caf9')+'">'+t.sh+(batT()===ti?' 🏏':'')+'</td>';for(let i=0;i<10;i++){if(i===9){let k=0,any=false;for(let j=9;j<15;j++)if(t.runs[j]!=null){k+=t.runs[j];any=true}s+='<td'+(G.pi>=9?' class="cur"':'')+'>'+(any?k:'')+'</td>';continue}
-  s+='<td'+(i===G.pi?' class="cur"':'')+(i===3?' style="border-right:2px solid #fff"':'')+'>'+(t.runs[i]!=null?t.runs[i]:'')+'</td>'}s+='<td><b>'+tot(ti)+'</b></td><td>'+jw[ti]+'</td></tr>'});$('sb').innerHTML=s;const hb=$('hud').getBoundingClientRect().bottom;if(hb!==window.__hb){window.__hb=hb;rsz()}
+function updHud(){if(!G)return;let s='<tr><td></td>';for(let i=0;i<NP;i++)s+='<td'+(i===VP-1?' style="border-right:2px solid #fff"':'')+'>'+(i%VP+1)+'</td>';s+='<td>S</td><td>K</td><td><b>Σ</b></td><td>J</td></tr>';const jw=jaksoWins();
+ T.forEach((t,ti)=>{s+='<tr><td class="tn" style="color:'+(ti?'#ef9a9a':'#90caf9')+'">'+t.sh+(batT()===ti?' 🏏':'')+'</td>';for(let i=0;i<NP+2;i++){if(i===NP+1){let k=0,any=false;for(let j=KPI;j<=KMAX;j++)if(t.runs[j]!=null){k+=t.runs[j];any=true}s+='<td'+(G.pi>=KPI?' class="cur"':'')+'>'+(any?k:'')+'</td>';continue}
+  s+='<td'+(i===G.pi?' class="cur"':'')+(i===VP-1?' style="border-right:2px solid #fff"':'')+'>'+(t.runs[i]!=null?t.runs[i]:'')+'</td>'}s+='<td><b>'+tot(ti)+'</b></td><td>'+jw[ti]+'</td></tr>'});$('sb').innerHTML=s;const hb=$('hud').getBoundingClientRect().bottom;if(hb!==window.__hb){window.__hb=hb;rsz()}
  const p=G.batter;{const t=T[batT()];const jh=hB()&&G.stage!=='k'?t.jk.map((j,i)=>G.jUsed.includes(i)?'':'<button onclick="useJoker('+i+');updHud()" title="'+j.n+'">J'+(i+1)+ic(j)+'</button>').join(' '):'';if($('jb').innerHTML!==jh)$('jb').innerHTML=jh}
  $('st').innerHTML=(G.stage==='k'?'Pari '+Math.min(5,G.pairs+1)+'/5 · ':'Palot <b>'+G.palot+'</b>/3 · Haav. '+G.haav+' · ')+(p?'Lyöjä: <b>'+p.n+'</b> '+ic(p)+' · Lyönti '+Math.min(3,G.lyonnit+1)+'/3':'')+(G.vaarat?' · Väärät '+G.vaarat:'');}
 // ---- syöte ----
@@ -217,6 +218,6 @@ $('rs').onclick=()=>{if(confirm('Aloitetaanko uusi ottelu?'))newGame()};$('rb').
 newGame();rsz();let lt=performance.now(),hudT=0;
 function frame(dt){if(hold)hold.t+=dt;if(tapMark)tapMark.t-=dt;for(let i=0;i<SPEED;i++)step(dt)}
 (function loop(n){const dt=Math.min(.05,(n-lt)/1000);lt=n;frame(dt);if((hudT+=dt)>.2){hudT=0;updHud()}draw();requestAnimationFrame(loop)})(lt);
-window.__run=sec=>{for(let t=0;t<sec;t+=1/60)step(1/60);updHud();return{over:G.over,pi:G.pi,stage:G.stage,phase,runs:T.map(t=>t.runs.slice())}};
+window.__run=sec=>{for(let t=0;t<sec;t+=1/60)step(1/60);updHud();return{over:G.over,pi:G.pi,np:NP,stage:G.stage,phase,runs:T.map(t=>t.runs.slice())}};
 window.__G=()=>G;window.__skipHalf=()=>{endHalf()};window.__ph=()=>phase;
 </script></body></html>
