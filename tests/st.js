@@ -1,0 +1,5 @@
+const pp=require('puppeteer-core');(async()=>{const br=await pp.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox'],headless:'new'});const N=+process.argv[2]||10;const C={},runs=[];let errs=0,locks=0;
+for(let g=0;g<N;g++){const pg=await br.newPage();pg.on('pageerror',()=>errs++);await pg.goto('http://localhost:8787/?auto');await pg.evaluate(()=>{window.C={};const op=palo;palo=function(r){const k='palo'+r.to;C[k]=(C[k]||0)+1;return op(r)};const ob=batterRun;batterRun=function(){C.batRun=(C.batRun||0)+1;return ob()}});
+let r;for(let i=0;i<300;i++){r=await pg.evaluate(()=>__run(30));if(r.over)break}if(!r.over)locks++;const c=await pg.evaluate(()=>C);for(const k in c)C[k]=(C[k]||0)+c[k];
+[0,1].forEach(t=>runs.push(r.runs[t].slice(0,r.np).reduce((a,b)=>a+(b||0),0)));await pg.close()}
+console.log('per match:',Object.fromEntries(Object.entries(C).map(([k,v])=>[k,(v/N).toFixed(1)])),'runs/team avg',(runs.reduce((a,b)=>a+b)/runs.length).toFixed(2),'min',Math.min(...runs),'max',Math.max(...runs),'errs',errs,'locks',locks);await br.close()})();
