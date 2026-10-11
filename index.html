@@ -128,7 +128,7 @@ function throwTo(t,q){const f=ball.hold,sw=f.sw;let tx=t.x,ty=t.y,sp,dev=0;
  if(dev){const a=rnd()*6.28,r=dev*(.4+.6*rnd());tx+=Math.cos(a)*r;ty+=Math.sin(a)*r;if(hF()&&phase==='play')say('Epätarkka heitto!')}else if(hF()&&phase==='play')say(q<sw[0]?'Hidas heitto':'Hyvä heitto!');
  const L=Math.hypot(tx-f.x,ty-f.y)||1;ball={x:f.x,y:f.y,h:1,vx:(tx-f.x)/L*sp,vy:(ty-f.y)/L*sp,vh:0,s:'throw',hold:null,tgt:t,rem:L/sp,hit:false,bounced:true};}
 function catchBy(f,base){ball.s='held';ball.hold=f;ball.h=0;ball.vx=ball.vy=0;ball.x=f.x;ball.y=f.y;G.aiT=0;G.aiD=(.2+rnd()*.3)*(has(f.p,'H')?.7:1)+(ball.bounced||!ball.hit?.3:0);F.forEach(o=>o.carry=null);if(base!=null)burnAt(base);burnHeld(f)}
-const BR=[8,4.7,4.7,4.7];function burnHeld(f){if(phase!=='play')return;for(let i=0;i<4;i++)if(d2(f,B[i])<=BR[i])burnAt(i)}
+const BR=[8,4.7,4.7,4.7],PR_=2.4;const onBase=(p,i)=>d2(p,B[i])<=BR[i]+PR_;function burnHeld(f){if(phase!=='play')return;for(let i=0;i<4;i++)if(onBase(f,i))burnAt(i)}
 function nearF(p,ex){let b=null,bd=1e9;F.forEach(f=>{if(f===ex)return;const d=d2(f,p);if(d<bd){bd=d;b=f}});return b}
 function aiThrow(h){let best=null,bs=-1e9;const PR=[.6,0,.2,.4];
  R.forEach(r=>{if(r.st!=='run'||r.free)return;const bp=B[r.to],tr=(1-r.prog)*d2(B[r.from],bp)/r.sp,dh=d2(h,bp);
@@ -151,7 +151,7 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
   else{const k=Math.max(0,1-1.4*dt);b.vx*=k;b.vy*=k}
   if(b.s==='roll'){if(b.x<XL||b.x>XR){b.vx*=-.5;b.x=clamp(b.x,XL,XR)}if(b.y<YT||b.y>YB){b.vy*=-.5;b.y=clamp(b.y,YT,YB)}}}
  else if(b.s==='throw'){const m=Math.min(dt,b.rem);b.x+=b.vx*m;b.y+=b.vy*m;b.rem-=dt;
-  if(b.rem<=0){const t=b.tgt;if(d2(b,t)<5){if(t.base!=null){const f=nearF(t,null);if(d2(f,t)<9){catchBy(f,null);if(d2(f,t)>BR[t.base])f.carry=B[t.base];return}}else{catchBy(t,null);return}}
+  if(b.rem<=0){const t=b.tgt;if(d2(b,t)<5){if(t.base!=null){const f=nearF(t,null);if(d2(f,t)<9){catchBy(f,null);if(!onBase(f,t.base))f.carry=B[t.base];return}}else{catchBy(t,null);return}}
    b.s='roll';b.vx*=.35;b.vy*=.35;b.h=0;b.x=clamp(b.x,XL,XR);b.y=clamp(b.y,YT,YB)}}
  // kenttäpelaajat
  let rcv=null;if(b.s==='throw'&&b.tgt&&b.tgt.base!=null){rcv=nearF(B[b.tgt.base],null);rcv.goal=B[b.tgt.base]}
@@ -173,7 +173,7 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
  // etenijät
  for(const r of R.slice()){if(r.st==='safe'){const t=B[r.base],l=d2(r,t);if(l>.2){const m=Math.min(l,r.sp*dt);r.x+=(t.x-r.x)/l*m;r.y+=(t.y-r.y)/l*m}continue}if(r.st==='back'){const t=B[r.from],dx=t.x-r.x,dy=t.y-r.y,l=Math.hypot(dx,dy);if(l<.4){r.st='safe';r.base=r.from;r.x=t.x;r.y=t.y}else{const m=Math.min(l,r.sp*dt);r.x+=dx/l*m;r.y+=dy/l*m}continue}if(r.st!=='run')continue;const a=B[r.from],c=B[r.to],L=d2(a,c);r.prog+=r.sp*dt/L;
   r.x=a.x+(c.x-a.x)*Math.min(1,r.prog);r.y=a.y+(c.y-a.y)*Math.min(1,r.prog);
-  if((1-r.prog)*L<=BR[r.to]){r.free=false;if(r.pend){leave(r);G.haavL.push(r.p);G.haav++;say('Haavoittui: '+r.p.n);continue}if(r.to===0){leave(r);score();if(G.stage!=='k')G.queue.push(r.p);say('JUOKSU! '+r.p.n);continue}
+  if((1-r.prog)*L<=BR[r.to]+PR_){r.free=false;if(r.pend){leave(r);G.haavL.push(r.p);G.haav++;say('Haavoittui: '+r.p.n);continue}if(r.to===0){leave(r);score();if(G.stage!=='k')G.queue.push(r.p);say('JUOKSU! '+r.p.n);continue}
    r.st='safe';r.base=r.to;if(r.bat&&r.playId===G.play&&r.to===3&&b.hit){score();say('KUNNARI! '+r.p.n)}r.bat=false}}
  // AI etenijät pelin aikana
  if(phase==='play'&&!hB()&&G.stage!=='k'||phase==='play'&&!hB()&&G.stage==='k'){G.aiRunT=(G.aiRunT||0)+dt;if(G.aiRunT>.4){G.aiRunT=0;
