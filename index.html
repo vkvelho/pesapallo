@@ -96,9 +96,9 @@ function doSwing(q,aim){if(G.swung||!G.batter)return;G.swung=true;const p=G.batt
  const low=rnd()<(has(p,'T')?.6:.5),vh=low?2.5+rnd()*5:12+rnd()*12,t=2*vh/40,v=Math.min(dist/(low?t+.32:t),32+42*pw*(.4+.6*q));ball={x:PLATE.x,y:PLATE.y-1,h:1,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vh,s:'flight',hold:null,hit:true,bounced:false,age:0};
  phase='play';G.playT=0;G.endT=0;G.aiRunT=0;say(q>.75?'Hyvä lyönti!':'Lyönti');
  const forced=G.lyonnit>=3&&G.stage!=='k',lt=t+.3,land={x:clamp(PLATE.x+ball.vx*lt,XL,XR),y:clamp(PLATE.y+ball.vy*lt,YT,YB)};
- const pk=predictPick(ball);window.__pk=pk;const ok=(from,sp)=>{if(!low&&rnd()<.85)return false;const nb=B[(from+1)%4],lg=d2(B[from],nb),ballT=pk.t+.25+.35+d2(pk,nb)/34+.08,runT=lg/sp-(from?1.2:0);return runT<ballT*(G.stage==='k'?1.15:1)*(.85+rnd()*.25)};
+ const pk=predictPick(ball);window.__pk=pk;const ok=(from,sp)=>{if(!low&&rnd()<.85)return false;const nb=B[(from+1)%4],lg=d2(B[from],nb),ballT=pk.t+.25+.35+d2(pk,nb)/34+.08,runT=lg/sp-(from?1.0:0);return runT<ballT*(G.stage==='k'?1.15:1)*(.85+rnd()*.25)};
  if(!hB())R.slice().sort((a,b)=>b.base-a.base).forEach(r=>{if(r.st==='safe'&&ok(r.base,r.sp*1.5))send(r)});
- if(forced)batterRun();else if(!hB()&&G.stage!=='k'&&ok(0,has(p,'N')?16:14)&&!occ(1))batterRun();R.forEach(r=>{if(r.st==='run'&&r.playId===G.play&&!r.bat)r.prog=Math.min(.9,r.prog+1.2*r.sp/d2(B[r.from],B[r.to]))});}
+ if(forced)batterRun();else if(!hB()&&G.stage!=='k'&&ok(0,has(p,'N')?16:14)&&!occ(1))batterRun();R.forEach(r=>{if(r.st==='run'&&r.playId===G.play&&!r.bat)r.prog=Math.min(.9,r.prog+1.0*r.sp/d2(B[r.from],B[r.to]))});}
 function useLyonti(){G.lyonnit++;if(G.lyonnit>=3){if(G.stage==='k'){phase='play';ball={...ball,s:'held',hold:F[0],h:0};return}
  say('3. lyönti meni – PALO!');G.palot++;G.batter&&G.queue.push(G.batter);G.batter=null;if(G.palot>=3)G.endPalo=.9;phase='play';G.playT=0;G.endT=0;resetHoldLukkari();}else{G.dead=.7;phase='dead'}}
 function resetHoldLukkari(){ball={x:F[0].x,y:F[0].y,h:0,vx:0,vy:0,vh:0,s:'held',hold:F[0],hit:false,bounced:false}}
