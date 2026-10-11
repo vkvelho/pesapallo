@@ -92,7 +92,7 @@ function timingQ(){if(ball.vh>=0||ball.h>6||ball.h<.7)return 0;return Math.max(.
 function predictPick(b0){let x=b0.x,y=b0.y,h=b0.h,vx=b0.vx,vy=b0.vy,vh=b0.vh,fl=b0.s==='flight';const dt=.05;
  for(let s=0;s<6;s+=dt){if(fl){vh-=40*dt;h+=vh*dt;if(h<=0){h=0;fl=false;vx*=.45;vy*=.45}}else{const k=Math.max(0,1-1.4*dt);vx*=k;vy*=k}x=clamp(x+vx*dt,XL,XR);y=clamp(y+vy*dt,YT,YB);
   if(s>.25&&h<4&&F.some(f=>d2(f,{x,y})-f.cr<=f.sp*(s-.25)))return{t:s,x,y}}return{t:6,x,y}}
-function aiAim(){const p=G.batter;const deep=G.lyonnit>=2||(has(p,'K')?rnd()<.6:rnd()<.3);let best=null,bd=-1;for(let i=0;i<(has(p,'T')?7:4);i++){const c=aiAim1(p,deep),d=Math.min(...F.map(f=>d2(f,c)));if(d>bd){bd=d;best=c}}return best}
+function aiAim(){const p=G.batter;const deep=G.lyonnit>=2||(has(p,'K')?rnd()<.6:rnd()<.3);let best=null,bd=-1;for(let i=0;i<(has(p,'T')?7:4);i++){const c=aiAim1(p,deep);if(!legalLanding(c.x,c.y)&&rnd()<.85){i--;continue}const d=Math.min(...F.map(f=>d2(f,c)));if(d>bd){bd=d;best=c}}return best}
 function aiAim1(p,deep){return{x:rnd()<.35?(rnd()<.5?XL:XR)+(rnd()-.5)*9:XL+3+rnd()*(XR-XL-6),y:deep?10+rnd()*60:70+rnd()*45}}
 function doSwing(q,aim){if(G.swung||!G.batter)return;G.swung=true;const p=G.batter;
  if(q<=0){say('Huti!');ball.s='dead';return useLyonti()}
@@ -102,9 +102,9 @@ function doSwing(q,aim){if(G.swung||!G.batter)return;G.swung=true;const p=G.batt
  const low=rnd()<(has(p,'T')?.6:.5),vh=low?2.5+rnd()*5:12+rnd()*12,t=2*vh/40,v=Math.min(dist/(low?t+.32:t),32+42*pw*(.4+.6*q));ball={x:PLATE.x,y:PLATE.y-1,h:1,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vh,s:'flight',hold:null,hit:true,bounced:false,age:0};
  phase='play';G.playT=0;G.endT=0;G.aiRunT=0;say(q>.75?'Hyvä lyönti!':'Lyönti');
  const forced=G.lyonnit>=3&&G.stage!=='k',lt=t+.3,land={x:clamp(PLATE.x+ball.vx*lt,XL,XR),y:clamp(PLATE.y+ball.vy*lt,YT,YB)};
- const pk=predictPick(ball);window.__pk=pk;const ok=(from,sp)=>{if(!low&&rnd()<.85)return false;const nb=B[(from+1)%4],lg=legLen(from,(from+1)%4),ballT=pk.t+.25+.35+d2(pk,nb)/34+.08,runT=lg/sp-(from?1.0:0);return runT<ballT*(G.stage==='k'?1.15:1)*(.85+rnd()*.25)};
+ const pk=predictPick(ball);window.__pk=pk;const ok=(from,sp)=>{if(!low&&rnd()<.85)return false;const nb=B[(from+1)%4],lg=legLen(from,(from+1)%4),ballT=pk.t+.25+.35+d2(pk,nb)/34+.08,runT=lg/sp-(from?1.3:0);return runT<ballT*(G.stage==='k'?1.15:1)*(.85+rnd()*.25)};
  if(!hB())R.slice().sort((a,b)=>b.base-a.base).forEach(r=>{if(r.st==='safe'&&ok(r.base,r.sp*1.5))send(r)});
- if(forced)batterRun();else if(!hB()&&G.stage!=='k'&&ok(0,has(p,'N')?16:14)&&!occ(1))batterRun();R.forEach(r=>{if(r.st==='run'&&r.playId===G.play&&!r.bat)r.prog=Math.min(.9,r.prog+1.0*r.sp/legLen(r.from,r.to))});}
+ if(forced)batterRun();else if(!hB()&&G.stage!=='k'&&ok(0,has(p,'N')?16:14)&&!occ(1))batterRun();R.forEach(r=>{if(r.st==='run'&&r.playId===G.play&&!r.bat)r.prog=Math.min(.9,r.prog+1.3*r.sp/legLen(r.from,r.to))});}
 function useLyonti(){G.lyonnit++;if(G.lyonnit>=3){if(G.stage==='k'){phase='play';ball={...ball,s:'held',hold:F[0],h:0};return}
  say('3. lyönti meni – PALO!');G.palot++;G.batter&&G.queue.push(G.batter);G.batter=null;if(G.palot>=3)G.endPalo=.9;phase='play';G.playT=0;G.endT=0;resetHoldLukkari();}else{G.dead=.7;phase='dead'}}
 function resetHoldLukkari(){ball={x:F[0].x,y:F[0].y,h:0,vx:0,vy:0,vh:0,s:'held',hold:F[0],hit:false,bounced:false}}
@@ -166,7 +166,7 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
  let ch=null;if(b.s==='flight'||b.s==='roll'){let p=b;if(b.s==='flight'){const t=(b.vh+Math.sqrt(b.vh*b.vh+80*Math.max(0,b.h)))/40;p={x:clamp(b.x+b.vx*t,XL,XR),y:clamp(b.y+b.vy*t,YT,YB)}}
   let bc=1e9;if(b.age<.25&&b.hit)p={x:-99,y:-99};F.forEach(f=>{const c=d2(f,p)/f.sp*(f.i<=3?1.7:1);if(c<bc){bc=c;ch=f}});ch.goal=p}
  for(const f of F){if(f===b.hold&&phase==='play'&&f.carry){const dx=f.carry.x-f.x,dy=f.carry.y-f.y,L=Math.hypot(dx,dy);if(L>.3){const m=Math.min(L,f.sp*dt);f.x+=dx/L*m;f.y+=dy/L*m}continue}
-  if(f===b.hold&&phase!=='return'&&phase!=='swap')continue;let gx=f.hx,gy=f.hy,sp=f.sp*(phase==='swap'?1.6:phase==='return'?.8:.45);if(f===rcv){gx=f.goal.x;gy=f.goal.y;sp=f.sp}if(f===ch){gx=f.goal.x;gy=f.goal.y;sp=f.sp;if(d2(f,b)<10){gx=b.x;gy=b.y}}
+  if(f===b.hold&&phase!=='return'&&phase!=='swap')continue;let gx=f.hx,gy=f.hy,sp=f.sp*(phase==='swap'?3:phase==='return'?.8:.45);if(f===rcv){gx=f.goal.x;gy=f.goal.y;sp=f.sp}if(f===ch){gx=f.goal.x;gy=f.goal.y;sp=f.sp;if(d2(f,b)<10){gx=b.x;gy=b.y}}
   const dx=gx-f.x,dy=gy-f.y,L=Math.hypot(dx,dy);if(L>.2){const m=Math.min(L,sp*dt);f.x+=dx/L*m;f.y+=dy/L*m}
   if((b.s==='flight'||b.s==='roll')&&d2(f,b)<f.cr&&b.h<5&&(b.age>.3||!b.hit)){
    if(b.s==='flight'&&b.hit&&!b.bounced&&!window.__noDrop&&rnd()>(has(f.p,'C')?.75:.5)*Math.min(1,b.h/2+.5)){b.bounced=true;b.vx*=.3;b.vy*=.3;say('Koppi putosi!');continue}
