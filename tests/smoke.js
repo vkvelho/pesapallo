@@ -1,0 +1,4 @@
+const pp=require('puppeteer-core');(async()=>{const br=await pp.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox'],headless:'new'});
+const pg=await br.newPage();await pg.setViewport({width:390,height:844});const errs=[];pg.on('pageerror',e=>errs.push(e.message));await pg.goto('http://localhost:8787/');await pg.click('#ovb');
+for(let k=0;k<900;k++){await pg.evaluate(()=>{const ev=(x,y)=>({preventDefault(){},clientX:x*S+OX,clientY:y*S+OY});if(phase==='pre'){const t=R.find(r=>r.st==='lead');if(t&&Math.random()<.5){down(ev(B[t.to].x,B[t.to].y));}else{down(ev(40,60));up(ev(40,60))}}if(phase==='play'&&hold&&hold.t>.65)up(ev(0,0));for(let i=0;i<20;i++)frame(1/60);draw();if($('ov').style.display==='flex')$('ovb').click()})}
+await pg.screenshot({path:'/workspace/pesapallo/kark.png'});console.log(await pg.evaluate(()=>({phase,half:G.half,pi:G.pi,score:[tot(0),tot(1)]})),errs);await br.close()})();
