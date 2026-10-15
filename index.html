@@ -66,7 +66,7 @@ function useJoker(i){const t=T[batT()],j=t.jk[i];if(!j||!G.batter||G.batter.j||G
 function aiJoker(){const t=T[batT()];if(hB()||G.stage==='k'||!G.batter||G.batter.j||G.lyonnit>0)return;const pres=R.some(r=>r.base>=2&&r.st==='safe');if(pres&&!has(G.batter,'K')&&rnd()<.5){const i=[0,1,2].find(i=>!G.jUsed.includes(i));if(i!=null)useJoker(i)}}
 function nextBatter(){const p=G.queue.shift();G.batter=p||null;G.lyonnit=0;G.vaarat=0;if(p){const t=T[batT()];if(t.pl.includes(p))t.next=(t.pl.indexOf(p)+1)%9}return !!p}
 function startPair(){R.forEach(r=>{r.p.wx=r.x;r.p.wy=r.y});R=[];const a=G.queue.shift();G.queue.push(a);R.push(mkR(a,3));nextBatter();G.batter&&G.queue.push(G.batter);G.pairScored=false;}
-function mkR(p,b){return{p,base:b,st:'safe',from:b,to:b,prog:0,x:B[b].x,y:B[b].y,sp:has(p,'N')?16.8:15,bat:false,free:false}}
+function mkR(p,b){return{p,base:b,st:'safe',from:b,to:b,prog:0,x:B[b].x,y:B[b].y,sp:has(p,'N')?17.2:15.4,bat:false,free:false}}
 function resetBall(ns){ball={x:F[0].x,y:F[0].y,h:0,vx:0,vy:0,vh:0,s:'held',hold:F[0],hit:false,bounced:false};if(!ns){F[0].x=F[0].hx;F[0].y=F[0].hy}hold=null;G.endT=0;G.playT=0;}
 function say(t){$('msg').textContent=t;G.msgT=2.6}
 function score(){T[batT()].runs[G.pi]++;if(G.stage==='k')G.pairScored=true}
@@ -147,12 +147,22 @@ function burnAt(b){let n=0;R.slice().forEach(r=>{if((r.st==='run'&&r.to===b&&!r.
 const TS=46,RF=2.6;let queued=null;
 function throwTo(t,q){const f=ball.hold,sw=f.sw;let tx=t.x,ty=t.y,sp,dev=0;
  if(q<sw[0])sp=20+(TS-24)*q/sw[0];else if(q<=sw[1])sp=TS;else{sp=TS-4;dev=8+40*Math.min(1,(q-sw[1])/(1-sw[1]))}
- if(dev){const a=rnd()*6.28,r=dev*(.4+.6*rnd());tx+=Math.cos(a)*r;ty+=Math.sin(a)*r;if(hF()&&phase==='play')say('Epätarkka heitto!')}else if(hF()&&phase==='play')say(q<sw[0]?'Hidas heitto':'Hyvä heitto!');
- const L=Math.hypot(tx-f.x,ty-f.y)||1;ball={x:f.x,y:f.y,h:1,vx:(tx-f.x)/L*sp,vy:(ty-f.y)/L*sp,vh:0,s:'throw',hold:null,tgt:t,rem:L/sp,hit:false,bounced:true};}
+ if(dev){const a=rnd()*6.28,r=dev*(.4+.6*rnd());tx+=Math.cos(a)*r;ty+=Math.sin(a)*r}
+ const aim=t.base!=null?B[t.base]:t,miss=Math.hypot(tx-aim.x,ty-aim.y);
+ if(hF()&&phase==='play')say(miss>ARM?'Epätarkka heitto!':q<sw[0]?'Hidas heitto':miss<.8?'Hyvä heitto!':'Kohtuullinen heitto');
+ const L=Math.hypot(tx-f.x,ty-f.y)||1;ball={x:f.x,y:f.y,h:1,vx:(tx-f.x)/L*sp,vy:(ty-f.y)/L*sp,vh:0,s:'throw',hold:null,tgt:t,land:{x:tx,y:ty},rem:L/sp,hit:false,bounced:true};}
 function catchBy(f,base){catchBy0(f,base);if(queued&&hF()&&phase==='play'&&ball.s==='held'&&ball.hold===f){const h=queued;queued=null;if(h.f!==f)throwTo(h.f||{x:h.x,y:h.y,base:h.base},h.q)}else if(hold&&hold.pre&&ball.hold===f){hold.pre=false;if(hold.f===f)hold=null}}
 function catchBy0(f,base){ball.s='held';ball.hold=f;ball.h=0;ball.vx=ball.vy=0;ball.x=f.x;ball.y=f.y;G.aiT=0;G.aiD=(.2+rnd()*.3)*(has(f.p,'H')?.7:1)+(ball.bounced||!ball.hit?.3:0);F.forEach(o=>o.carry=null);if(base!=null)burnAt(base);burnHeld(f)}
-const BR=[8,4.7,4.7,4.7],PR_=2.4;const onBase=(p,i)=>d2(p,B[i])<=BR[i]+PR_;function burnHeld(f){if(phase!=='play')return;for(let i=0;i<4;i++)if(onBase(f,i))burnAt(i)}
+const BR=[8,4.7,4.7,4.7],PR_=2.4,ARM=1.9;const onBase=(p,i)=>d2(p,B[i])<=BR[i]+PR_;
+function baseF(i){return F[i]||nearF(B[i],null)}
+function keepOn(f,i,tx,ty){const max=BR[i]+PR_-.15,dx=tx-B[i].x,dy=ty-B[i].y,d=Math.hypot(dx,dy)||1;const u=Math.min(1,max/d);f.x=B[i].x+dx*u;f.y=B[i].y+dy*u}
+function burnHeld(f){if(phase!=='play')return;for(let i=0;i<4;i++)if(onBase(f,i))burnAt(i)}
 function nearF(p,ex){let b=null,bd=1e9;F.forEach(f=>{if(f===ex)return;const d=d2(f,p);if(d<bd){bd=d;b=f}});return b}
+function recvThrow(t,land){if(t.base==null){const f=typeof t.i==='number'?t:nearF(land,null);if(d2(f,land)<9){catchBy(f,null);return true}return false}
+ const bi=t.base,f=baseF(bi),reach=BR[bi]+ARM;
+ if(d2(land,B[bi])<=reach){keepOn(f,bi,land.x,land.y);catchBy(f,bi);return true}
+ if(d2(f,land)<9){catchBy(f,null);f.carry=B[bi];return true}
+ return false}
 function aiThrow(h){let best=null,bs=-1e9;const PR=[.6,0,.2,.4];
  R.forEach(r=>{if(r.st!=='run'||r.free)return;const bp=B[r.to],tr=(1-r.prog)*legLen(r.from,r.to)/r.sp,dh=d2(h,bp);
   if(dh<BR[r.to]+8){const m=tr-Math.max(0,dh-BR[r.to]+.5)/h.sp;if(m>0&&m+PR[r.to]+.3>bs){bs=m+PR[r.to]+.3;best={run:1,b:r.to}}}
@@ -177,10 +187,12 @@ function step(dt){if(G.msgT>0&&(G.msgT-=dt)<=0)$('msg').textContent='';if(phase=
   else{const k=Math.max(0,1-RF*dt);b.vx*=k;b.vy*=k}
   if(b.s==='roll'){if(b.x<XL||b.x>XR){b.vx*=-.5;b.x=clamp(b.x,XL,XR)}if(b.y<YT||b.y>YB){b.vy*=-.5;b.y=clamp(b.y,YT,YB)}}}
  else if(b.s==='throw'){const m=Math.min(dt,b.rem);b.x+=b.vx*m;b.y+=b.vy*m;b.rem-=dt;
-  if(b.rem<=0){const t=b.tgt;if(d2(b,t)<5){if(t.base!=null){const f=nearF(t,null);if(d2(f,t)<9){catchBy(f,null);if(!onBase(f,t.base))f.carry=B[t.base];return}}else{catchBy(t,null);return}}
+  if(b.rem<=0){const t=b.tgt,land=b.land||{x:b.x,y:b.y};if(recvThrow(t,land))return;
    b.s='roll';b.vx*=.35;b.vy*=.35;b.h=0;b.x=clamp(b.x,XL,XR);b.y=clamp(b.y,YT,YB)}}
  // kenttäpelaajat
- let rcv=null;if(b.s==='throw'&&b.tgt&&b.tgt.base!=null){rcv=nearF(B[b.tgt.base],null);rcv.goal=B[b.tgt.base]}
+ let rcv=null;if(b.s==='throw'&&b.tgt&&b.tgt.base!=null){const bi=b.tgt.base,land=b.land||B[bi];rcv=baseF(bi);
+  if(d2(land,B[bi])<=BR[bi]+ARM){const max=BR[bi]+PR_-.2,dx=land.x-B[bi].x,dy=land.y-B[bi].y,d=Math.hypot(dx,dy)||1,u=Math.min(1,(max*.7)/d);rcv.goal={x:B[bi].x+dx*u,y:B[bi].y+dy*u}}
+  else rcv.goal=land}
  let ch=null;if(b.s==='flight'||b.s==='roll'){let p=b;if(b.s==='flight'){const t=(b.vh+Math.sqrt(b.vh*b.vh+80*Math.max(0,b.h)))/40;p={x:clamp(b.x+b.vx*t,XL,XR),y:clamp(b.y+b.vy*t,YT,YB)}}
   let bc=1e9;if(b.age<.25&&b.hit)p={x:-99,y:-99};F.forEach(f=>{const c=d2(f,p)/f.sp*(f.i<=3?1.7:1);if(c<bc){bc=c;ch=f}});ch.goal=p}
  for(const f of F){if(f===b.hold&&phase==='play'&&f.carry){const dx=f.carry.x-f.x,dy=f.carry.y-f.y,L=Math.hypot(dx,dy);if(L>.3){const m=Math.min(L,f.sp*dt);f.x+=dx/L*m;f.y+=dy/L*m}continue}
