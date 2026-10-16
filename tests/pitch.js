@@ -18,7 +18,8 @@ const res=await pg.evaluate(()=>{const out={};const ev=(x,y)=>({preventDefault()
    let j=0;while(r.st!=='run'&&G.feint&&j++<60)fr(1);if(r.st==='run'){fooled++;fr(20);down(ev(B[2].x,B[2].y));fr(40);up(ev(B[2].x,B[2].y));fr(240);if(!R.includes(r))ok++}}
   out.feint_fooled=fooled+'/'+N;out.feint_burned=ok+'/'+fooled;out.feint_vaarat=G.vaarat}
  // feint w/o target: lukkari keeps ball after 1s
- prep();down(ev(40,100));mv(ev(40,100-40/S));up(ev(40,100-5/S));fr(70);out.feint_keep=phase==='pre'&&!G.feint&&ball.hold===F[0];
- G.half=1;startHalf();fr(400);snapAll();{let burned=0,N=6;for(let k=0;k<N;k++){prep();const r=mkR(T[0].pl.find(p=>!has(p,'N')),1);R.push(r);kark(r);r.prog=LP(r);feint();out.aiFeint_ai=G.feint.ai;fr(6);const e=ev(r.x,r.y);down(e);up(e);fr(400);if(!R.includes(r))burned++}out.aiFeint_burnedFooledHuman=burned+'/'+N}
+ prep();G.batter.wx=SPOT.x;G.batter.wy=SPOT.y;const r0=mkR(T[1].pl[3],2);R.push(r0);down(ev(40,100));mv(ev(40,100-40/S));up(ev(40,100-5/S));fr(70);out.feintFault_vaarat=G.vaarat;out.feintFault_msg=msgs.find(m=>m.includes('§25'))||null;
+ prep();down(ev(40,100));mv(ev(40,100-40/S));up(ev(40,100-5/S));fr(10);const ff=F[6];down(ev(ff.x,ff.y));fr(40);up(ev(ff.x,ff.y));fr(120);out.feintToFielder_ok=G.vaarat===0&&!msgs.some(m=>m.includes('§25'));
+ G.half=1;startHalf();fr(400);snapAll();{let burned=0,N=6;for(let k=0;k<N;k++){prep();const r=mkR(T[0].pl.find(p=>!has(p,'N')),1);R.push(r);kark(r);r.prog=LP(r);feint();out.aiFeint_ai=G.feint.ai;fr(6);const e=ev(r.x,r.y);down(e);up(e);fr(400);if(!R.includes(r))burned++}out.aiFeint_burnedFooledHuman=burned+'/'+N;let v=0;for(let k=0;k<8;k++){prep();const r=mkR(T[0].pl[2],1);R.push(r);kark(r);r.prog=LP(r);feint();fr(300);v+=G.vaarat;if(msgs.some(m=>m.includes('§25')))v+=100}out.aiFeint_noFault=v===0}
  window.say=s0;return out});
 console.log(JSON.stringify(res),errs);await br.close()})();
